@@ -1,0 +1,630 @@
+// MES 製造執行系統 — 資料庫結構定義 (DBML)
+// 對應 React prototype 的核心功能，涵蓋工單生命週期、BOM、製程、資源、成本
+
+// ═══════════════════════════════════════
+// Project Meta
+// ═══════════════════════════════════════
+
+Project {
+  database_type: 'PostgreSQL'
+  note: 'MES Manufacturing Execution System — 核心資料模型'
+}
+
+Table company {
+  id bigserial [pk]
+  code varchar(20) [unique, not null]
+  name varchar(100) [not null]
+  currency_id bigint [note: 'ref: currency']
+  created_at timestamp [default: `now()`]
+}
+
+Table unit {
+  id bigserial [pk]
+  code varchar(10) [unique, not null]
+  name varchar(50) [not null]
+  note: '計量單位：個、kg、m、L...'
+}
+
+Table currency {
+  id bigserial [pk]
+  code varchar(3) [unique, not null]  // USD, TWD
+  name varchar(50) [not null]
+  symbol varchar(5)
+}
+
+Table app_user {
+  id bigserial [pk]
+  login varchar(50) [unique, not null]
+  password_hash varchar(255) [not null]
+  name varchar(100) [not null]
+  email varchar(200)
+  active boolean [default: true]
+  company_id bigint [ref: > company.id]
+  role varchar(20) [note: '生產管理師 | 現場主管 | 作業員 | 品管員 | 成本會計']
+  created_at timestamp [default: `now()`]
+}
+
+Table partner {
+  id bigserial [pk]
+  partner_code varchar(20) [unique]
+  name varchar(200) [not null]
+  partner_type varchar(10) [note: 'customer | supplier | subcontractor']
+  is_subcontractor boolean [default: false]
+  email varchar(200)
+  phone varchar(50)
+  company_id bigint [ref: > company.id]
+}
+
+Table stock_location {
+  id bigserial [pk]
+  code varchar(20) [unique, not null]
+  name varchar(100) [not null]
+  type_select int [note: '1=倉庫, 2=工作坊, 3=虛擬庫位, 4=委外庫位']
+  is_workshop boolean [default: false]
+  company_id bigint [ref: > company.id, not null]
+}
+
+// ═══════════════════════════════════════
+// 產品主檔
+// ═══════════════════════════════════════
+
+Table product {
+  id bigserial [pk]
+  code varchar(30) [unique, not null]
+  name varchar(200) [not null]
+  product_type varchar(10) [note: 'storable | service | raw_material']
+  product_sub_type int [note: '1=成品, 2=半成品, 3=原料']
+  unit_id bigint [ref: > unit.id, not null]
+  cost_price decimal(20,10)
+  sale_price decimal(20,10)
+  last_production_price decimal(20,10)
+  has_no_manage_stock boolean [default: false]
+  company_id bigint [ref: > company.id, not null]
+  picture_url text
+  description text
+  active boolean [default: true]
+  created_at timestamp [default: `now()`]
+  Indexes {
+    code [unique]
+    name
+    (company_id, code) [unique]
+  }
+}
+
+// ═══════════════════════════════════════
+// 資源管理：工作中心、機台、工具
+// ═══════════════════════════════════════
+
+Table machine_type {
+  id bigserial [pk]
+  code varchar(20) [unique, not null]
+  name varchar(100) [not null]
+}
+
+Table machine {
+  id bigserial [pk]
+  code varchar(30) [unique, not null]
+  name varchar(100) [not null]
+  serial_number varchar(50)
+  brand varchar(50)
+  machine_type_id bigint [ref: > machine_type.id]
+  stock_location_id bigint [ref: > stock_location.id]
+  weekly_planning_id bigint [note: '排程計畫 ref']
+  operating_duration bigint [note: '累計運轉時數（秒）']
+  number_of_stations int
+  buying_price decimal(15,2)
+  buying_date date
+  manuf_date date
+  disposal_date date
+  status varchar(15) [default: 'running'] // running | stopped | maintenance
+  picture_url text
+  company_id bigint [ref: > company.id, not null]
+}
+
+Table machine_tool {
+  id bigserial [pk]
+  code varchar(30) [unique, not null]
+  name varchar(100) [not null]
+  description text
+  manufacturer varchar(100)
+  machine_id bigint [ref: > machine.id]
+  buying_price decimal(15,2)
+  maintenance_cost decimal(15,2)
+  hours_of_use decimal(15,2) [note: '使用時數']
+  last_overhaul_date date
+  next_overhaul_date date
+  image_url text
+}
+
+Table work_center_group {
+  id bigserial [pk]
+  code varchar(30) [unique]
+  name varchar(100) [not null]
+  work_center_type_select int [note: '1=人工, 2=機器, 3=人工與機器']
+  company_id bigint [ref: > company.id]
+}
+
+Table work_center {
+  id bigserial [pk]
+  code varchar(30) [unique, not null]
+  name varchar(100) [not null]
+  work_center_type_select int [not null, note: '1=人工, 2=機器, 3=人工與機器']
+  machine_id bigint [ref: > machine.id, note: 'type=2/3 時必填']
+  machine_tool_id bigint [ref: > machine_tool.id]
+  work_center_group_id bigint [ref: > work_center_group.id]
+  min_capacity_per_cycle decimal(15,5)
+  max_capacity_per_cycle decimal(15,5)
+  // 機器工時
+  duration_per_cycle bigint [note: '秒']
+  starting_duration bigint [note: '秒']
+  setup_duration bigint [note: '秒']
+  ending_duration bigint [note: '秒']
+  time_before_next_operation bigint [note: '秒，兩工序間等待']
+  // 人工工時
+  hr_duration_per_cycle bigint [note: '秒']
+  // 成本
+  cost_type_select int [note: '1=每小時, 2=每循環, 3=每件']
+  cost_amount decimal(15,5)
+  hr_cost_type_select int [note: '1=每小時, 2=每循環, 3=每件']
+  hr_cost_amount decimal(15,5)
+  is_revaluation_at_actual_prices boolean [default: false]
+  sequence int
+  company_id bigint [ref: > company.id, not null]
+  Indexes {
+    (company_id, code) [unique]
+  }
+}
+
+// ═══════════════════════════════════════
+// BOM 物料清單（定義層 — 做什麼）
+// ═══════════════════════════════════════
+
+Table bill_of_material {
+  id bigserial [pk]
+  name varchar(100) [not null]
+  full_name varchar(255)
+  product_id bigint [ref: > product.id, not null]
+  qty decimal(20,10) [default: 1, not null]
+  unit_id bigint [ref: > unit.id, not null]
+  prod_process_id bigint [ref: > prod_process.id]
+  company_id bigint [ref: > company.id, not null]
+  workshop_stock_location_id bigint [ref: > stock_location.id]
+  status_select int [default: 1, note: '1=Draft, 2=Validated, 3=Applicable, 4=Obsolete']
+  version_number int [default: 1]
+  original_bom_id bigint [ref: > bill_of_material.id, note: '版本管理：指向最初版本']
+  cost_price decimal(20,10)
+  calculation_qty decimal(20,10) [default: 1]
+  define_sub_bill_of_material boolean [default: true]
+  personalized boolean [default: false]
+  has_no_manage_stock boolean [default: false]
+  note text
+  created_at timestamp [default: `now()`]
+  updated_at timestamp
+  Indexes {
+    (product_id, status_select)
+    (company_id, status_select)
+  }
+}
+
+Table bill_of_material_line {
+  id bigserial [pk]
+  priority int [note: '排序，自動 +10 遞增']
+  bill_of_material_parent_id bigint [ref: > bill_of_material.id, not null]
+  product_id bigint [ref: > product.id, not null]
+  qty decimal(20,10) [not null]
+  unit_id bigint [ref: > unit.id, not null]
+  bill_of_material_id bigint [ref: > bill_of_material.id, note: '子 BOM — 當 product 為半成品時指向下游 BOM']
+  has_no_manage_stock boolean [default: false]
+  waste_rate decimal(5,4) [note: '報廢率 0.00-1.00']
+  Indexes {
+    (bill_of_material_parent_id, priority)
+  }
+}
+
+Table prod_residual_product {
+  id bigserial [pk]
+  bill_of_material_id bigint [ref: > bill_of_material.id, not null]
+  product_id bigint [ref: > product.id, not null]
+  qty decimal(20,10) [not null]
+  unit_id bigint [ref: > unit.id, not null]
+}
+
+// ═══════════════════════════════════════
+// ProdProcess 生產製程（定義層 — 怎麼做）
+// ═══════════════════════════════════════
+
+Table prod_process {
+  id bigserial [pk]
+  name varchar(100) [not null]
+  full_name varchar(255)
+  code varchar(30) [unique]
+  company_id bigint [ref: > company.id, not null]
+  product_id bigint [ref: > product.id, note: '對應產品（可空 = 通用）']
+  is_enabled_for_all_products boolean [default: false]
+  status_select int [default: 1, note: '1=Draft, 2=Validated, 3=Applicable, 4=Obsolete']
+  version_number int [default: 1]
+  original_prod_process_id bigint [ref: > prod_process.id]
+  stock_location_id bigint [ref: > stock_location.id, note: '生產虛擬庫位']
+  produced_product_stock_location_id bigint [ref: > stock_location.id]
+  residual_products_stock_location_id bigint [ref: > stock_location.id]
+  workshop_stock_location_id bigint [ref: > stock_location.id]
+  // 工序行為設定
+  is_cons_pro_on_operation boolean [default: false, note: '在每道工序上管理消耗品']
+  operation_continuity boolean [default: false, note: '工序必須依序執行']
+  // 委外設定
+  outsourcing boolean [default: false]
+  outsourcable boolean [default: false]
+  prod_process_lines_outsourcable boolean [default: false]
+  subcontractor_id bigint [ref: > partner.id]
+  outsourcing_stock_location_id bigint [ref: > stock_location.id]
+  generate_purchase_order_on_mo_planning boolean [default: false]
+  // 其他
+  stock_move_realize_order_select int [default: 0, note: '0=On Start, 1=On Finish']
+  launch_qty decimal(20,10) [default: 1]
+  is_personalized boolean [default: false]
+  note text
+  created_at timestamp [default: `now()`]
+  updated_at timestamp
+  Indexes {
+    (product_id, status_select)
+    (company_id, status_select)
+  }
+}
+
+Table prod_process_line {
+  id bigserial [pk]
+  priority int [note: '排序']
+  prod_process_id bigint [ref: > prod_process.id, not null]
+  name varchar(100) [not null, note: '工序名稱：如 車削、組裝']
+  work_center_id bigint [ref: > work_center.id]
+  work_center_type_select int [note: '1=人工, 2=機器, 3=兩者']
+  work_center_group_id bigint [ref: > work_center_group.id]
+  machine_tool_id bigint [ref: > machine_tool.id]
+  // 產能
+  min_capacity_per_cycle decimal(15,5)
+  max_capacity_per_cycle decimal(15,5)
+  // 機器工時
+  duration_per_cycle bigint [note: '秒']
+  duration_per_cycle_decimal decimal(15,5) [note: '小時']
+  setup_duration bigint
+  starting_duration bigint
+  ending_duration bigint
+  // 人工工時
+  human_duration bigint [note: '秒']
+  human_duration_decimal decimal(15,5) [note: '小時']
+  time_before_next_operation bigint [note: '秒，下一道工序前等待']
+  // 成本
+  cost_type_select int [note: '1=每小時, 2=每循環, 3=每件']
+  cost_amount decimal(15,5)
+  hr_cost_type_select int
+  hr_cost_amount decimal(15,5)
+  product_id bigint [ref: > product.id, note: '機器成本服務產品']
+  hr_product_id bigint [ref: > product.id, note: '人工成本服務產品']
+  // 委外
+  outsourcing boolean [default: false]
+  outsourcable boolean [default: false]
+  outsourcing_partner_id bigint [ref: > partner.id]
+  outsourcing_duration bigint [note: '秒']
+  generate_purchase_order_on_mo_planning boolean [default: false]
+  // 其他
+  optional boolean [default: false]
+  stock_location_id bigint [ref: > stock_location.id]
+  description text
+  Indexes {
+    (prod_process_id, priority)
+  }
+}
+
+// ProdProcessLine 專屬消耗品（當 is_cons_pro_on_operation = true）
+Table prod_process_line_product {
+  id bigserial [pk]
+  prod_process_line_id bigint [ref: > prod_process_line.id, not null]
+  product_id bigint [ref: > product.id, not null]
+  qty decimal(20,10) [not null]
+  unit_id bigint [ref: > unit.id, not null]
+}
+
+// ═══════════════════════════════════════
+// 執行層 — 生產訂單、製造工單、工序工單
+// ═══════════════════════════════════════
+
+Table production_order {
+  id bigserial [pk]
+  production_order_seq varchar(30) [unique]
+  status_select int [default: 1, note: '1=Draft, 2=Planned, 3=Started, 4=Canceled, 5=Completed']
+  company_id bigint [ref: > company.id, not null]
+  client_partner_id bigint [ref: > partner.id]
+  estimated_start_date timestamp
+  estimated_end_date timestamp
+  note text
+  created_at timestamp [default: `now()`]
+}
+
+Table manuf_order {
+  id bigserial [pk]
+  manuf_order_seq varchar(30) [unique]
+  status_select int [default: 1, not null, note: '1=Draft, 2=Cancelled, 3=Planned, 4=In Progress, 5=Standby, 6=Finished, 7=Merged']
+  priority_select int [default: 2, note: '1=Low, 2=Normal, 3=High, 4=Urgent']
+  type_select int [default: 1, note: '1=Production, 2=Permanent']
+  company_id bigint [ref: > company.id, not null]
+  client_partner_id bigint [ref: > partner.id]
+  product_id bigint [ref: > product.id, not null]
+  unit_id bigint [ref: > unit.id, not null]
+  qty decimal(20,10) [not null]
+  bill_of_material_id bigint [ref: > bill_of_material.id, not null]
+  prod_process_id bigint [ref: > prod_process.id, not null]
+  workshop_stock_location_id bigint [ref: > stock_location.id]
+  production_order_id bigint [ref: > production_order.id]
+  parent_mo_id bigint [ref: > manuf_order.id, note: '多層級規劃的父工單']
+  manuf_order_merge_result_id bigint [ref: > manuf_order.id, note: '合併結果']
+  cancel_reason_id bigint [ref: > cancel_reason.id]
+  // 成本
+  cost_price decimal(20,10)
+  // 日期
+  planned_start_date_t timestamp
+  planned_end_date_t timestamp
+  real_start_date_t timestamp
+  real_end_date_t timestamp
+  end_time_difference decimal(15,5) [note: '計畫 vs 實際 分鐘差']
+  // 委外
+  outsourcing boolean [default: false]
+  outsourcing_partner_id bigint [ref: > partner.id]
+  // 旗標
+  is_cons_pro_on_operation boolean [default: false]
+  plan_only_missing_quantities boolean [default: false]
+  operation_order_max_priority int [note: '工序連續性控制']
+  note text
+  cancel_reason_str text
+  waste_prod_description text
+  barcode_url text
+  created_at timestamp [default: `now()`]
+  updated_at timestamp
+  Indexes {
+    (manuf_order_seq, company_id) [unique]
+    (status_select, planned_start_date_t)
+    (company_id, status_select)
+    (production_order_id)
+    (product_id, status_select)
+  }
+}
+
+// 工單 ↔ 銷售訂單（多對多，通常由 ERP 注入）
+Table manuf_order_sale_order {
+  manuf_order_id bigint [ref: > manuf_order.id]
+  sale_order_id bigint [note: 'ref: sale_order (外部)']
+}
+
+// ═══════════════════════════════════════
+// 工序工單 OperationOrder
+// ═══════════════════════════════════════
+
+Table operation_order {
+  id bigserial [pk]
+  priority int [not null]
+  name varchar(50)
+  operation_name varchar(100) [note: '工序名稱（從 ProdProcessLine 複製）']
+  manuf_order_id bigint [ref: > manuf_order.id, not null]
+  prod_process_line_id bigint [ref: > prod_process_line.id]
+  status_select int [default: 1, note: '1=Draft, 2=Cancelled, 3=Planned, 4=In Progress, 5=Standby, 6=Finished']
+  work_center_id bigint [ref: > work_center.id]
+  machine_id bigint [ref: > machine.id]
+  machine_tool_id bigint [ref: > machine_tool.id]
+  // 日期
+  planned_start_date_t timestamp
+  planned_end_date_t timestamp
+  planned_end_with_waiting_date_t timestamp [note: '含 timeBeforeNextOperation']
+  real_start_date_t timestamp
+  real_end_date_t timestamp
+  // 工時
+  planned_duration bigint [note: '計畫機器工時 秒']
+  planned_human_duration bigint [note: '計畫人工工時 秒']
+  planned_machine_duration bigint [note: '計畫機器工時 秒']
+  real_duration bigint [note: '實際工時 秒']
+  // 委外
+  outsourcing boolean [default: false]
+  outsourcing_partner_id bigint [ref: > partner.id]
+  // 其他
+  comments text
+  barcode_url text
+  created_at timestamp [default: `now()`]
+  updated_at timestamp
+  Indexes {
+    (manuf_order_id, priority)
+    (status_select, planned_start_date_t)
+    (work_center_id, planned_start_date_t)
+  }
+}
+
+// 每次啟停的工時記錄
+Table operation_order_duration {
+  id bigserial [pk]
+  operation_order_id bigint [ref: > operation_order.id, not null]
+  started_by bigint [ref: > app_user.id, not null]
+  starting_date_time timestamp [not null]
+  stopped_by bigint [ref: > app_user.id]
+  stopping_date_time timestamp
+  duration bigint [note: '計算欄：stopping - starting 秒']
+  Indexes {
+    (operation_order_id, starting_date_time)
+    (started_by, starting_date_time)
+  }
+}
+
+// ═══════════════════════════════════════
+// ProdProduct — 通用「產品+數量」結構
+// 被多個情境引用：待消耗 / 已消耗 / 待生產 / 報廢 / 差異
+// ═══════════════════════════════════════
+
+Table prod_product {
+  id bigserial [pk]
+  product_id bigint [ref: > product.id, not null]
+  qty decimal(20,10) [not null]
+  unit_id bigint [ref: > unit.id, not null]
+  planned_qty decimal(20,10) [note: '計畫量（差異比對用）']
+  real_qty decimal(20,10) [note: '實際量（差異比對用）']
+  // 反向歸屬（依場景擇一）
+  to_consume_manuf_order_id bigint [ref: > manuf_order.id, note: '工單層 待消耗']
+  diff_consume_manuf_order_id bigint [ref: > manuf_order.id, note: '工單層 消耗差異']
+  to_produce_manuf_order_id bigint [ref: > manuf_order.id, note: '工單層 待生產']
+  waste_manuf_order_id bigint [ref: > manuf_order.id, note: '工單層 報廢']
+  to_consume_operation_order_id bigint [ref: > operation_order.id, note: '工序層 待消耗']
+  diff_consume_operation_order_id bigint [ref: > operation_order.id, note: '工序層 消耗差異']
+  waste_product_tracking_number_id bigint [note: '報廢批號追蹤']
+  Indexes {
+    (to_consume_manuf_order_id)
+    (to_produce_manuf_order_id)
+    (waste_manuf_order_id)
+    (to_consume_operation_order_id)
+  }
+}
+
+// ═══════════════════════════════════════
+// 庫存異動 StockMove / StockMoveLine
+// ═══════════════════════════════════════
+
+Table stock_move {
+  id bigserial [pk]
+  stock_move_seq varchar(30) [unique]
+  type_select int [not null, note: '1=入庫, 2=出庫, 3=內部調撥']
+  status_select int [default: 1, note: '1=Draft, 2=Planned, 3=Realized, 4=Canceled']
+  company_id bigint [ref: > company.id, not null]
+  from_stock_location_id bigint [ref: > stock_location.id]
+  to_stock_location_id bigint [ref: > stock_location.id]
+  partner_id bigint [ref: > partner.id]
+  // 關聯工單
+  manuf_order_id bigint [ref: > manuf_order.id, note: 'in/out move 歸屬工單']
+  manuf_order_outsourcing_id bigint [ref: > manuf_order.id, note: '委外 move']
+  manuf_order_waste_id bigint [ref: > manuf_order.id, note: '報廢 move']
+  operation_order_id bigint [ref: > operation_order.id, note: '工序層 move']
+  real_date timestamp
+  planned_date timestamp
+  note text
+  created_at timestamp [default: `now()`]
+  Indexes {
+    (manuf_order_id, type_select)
+    (status_select, real_date)
+  }
+}
+
+Table stock_move_line {
+  id bigserial [pk]
+  stock_move_id bigint [ref: > stock_move.id, not null]
+  product_id bigint [ref: > product.id, not null]
+  qty decimal(20,10) [not null]
+  unit_id bigint [ref: > unit.id, not null]
+  real_qty decimal(20,10)
+  // 關聯回 ProdProduct（已消耗 / 已生產）
+  consumed_manuf_order_id bigint [ref: > manuf_order.id, note: 'consumedStockMoveLine 歸屬']
+  produced_manuf_order_id bigint [ref: > manuf_order.id, note: 'producedStockMoveLine 歸屬']
+  residual_manuf_order_id bigint [ref: > manuf_order.id, note: 'residualStockMoveLine 歸屬']
+  unit_price decimal(20,10)
+  tracking_number varchar(50) [note: '批號追蹤']
+  Indexes {
+    (stock_move_id)
+    (product_id)
+    (consumed_manuf_order_id)
+    (produced_manuf_order_id)
+  }
+}
+
+// ═══════════════════════════════════════
+// 成本計算
+// ═══════════════════════════════════════
+
+Table cost_sheet_group {
+  id bigserial [pk]
+  code varchar(20) [unique]
+  name varchar(100) [not null]
+  cost_type_select int [note: '1=產品, 2=工作中心, 3=加成/費率']
+  rate_type_select int [note: '3型時: 1=加成(Surcharge), 2=費率(Rate)']
+  rate decimal(10,5) [note: '3型時的比率，如 0.05 或 1.05']
+  parent_group_id bigint [ref: > cost_sheet_group.id, note: '嵌套子群組']
+  company_id bigint [ref: > company.id]
+}
+
+Table cost_sheet {
+  id bigserial [pk]
+  bill_of_material_id bigint [ref: > bill_of_material.id]
+  manuf_order_id bigint [ref: > manuf_order.id]
+  calculation_type int [not null, note: '1=部分完工, 2=完工結算, 3=WIP, 4=BOM預估']
+  cost_price decimal(20,10) [not null]
+  currency_id bigint [ref: > currency.id]
+  calculation_date timestamp [default: `now()`]
+  calculation_qty decimal(20,10)
+  manuf_order_produced_ratio decimal(10,5) [note: '完工比例']
+  created_by bigint [ref: > app_user.id]
+  Indexes {
+    (manuf_order_id, calculation_type)
+    (bill_of_material_id)
+  }
+}
+
+Table cost_sheet_line {
+  id bigserial [pk]
+  cost_sheet_id bigint [ref: > cost_sheet.id, not null]
+  parent_cost_sheet_line_id bigint [ref: > cost_sheet_line.id, note: '樹狀結構父節點']
+  type_select int [note: '1/2=產品, 3=工作中心, 4=其他']
+  bom_level int [note: 'BOM 層級']
+  code varchar(30)
+  product_id bigint [ref: > product.id]
+  work_center_id bigint [ref: > work_center.id]
+  cost_sheet_group_id bigint [ref: > cost_sheet_group.id]
+  consumption_qty decimal(20,10)
+  unit_id bigint [ref: > unit.id]
+  cost_price decimal(20,10) [note: '本階段成本']
+  unit_cost_price decimal(20,10) [note: '單位成本']
+  ratio decimal(10,5) [note: '佔比']
+  Indexes {
+    (cost_sheet_id, bom_level, code)
+    (parent_cost_sheet_line_id)
+  }
+}
+
+// ═══════════════════════════════════════
+// 輔助表
+// ═══════════════════════════════════════
+
+Table cancel_reason {
+  id bigserial [pk]
+  code varchar(20) [unique]
+  name varchar(100) [not null]
+  application_type varchar(30) [note: 'ManufOrder | OperationOrder | ...']
+  company_id bigint [ref: > company.id]
+}
+
+// 原料需求估算
+Table raw_material_requirement {
+  id bigserial [pk]
+  code varchar(30) [unique]
+  name varchar(100) [not null]
+  company_id bigint [ref: > company.id, not null]
+  duration varchar(30) [note: '估算區間']
+  generated_at timestamp [default: `now()`]
+}
+
+// 工單狀態變更稽核
+Table manuf_order_status_log {
+  id bigserial [pk]
+  manuf_order_id bigint [ref: > manuf_order.id, not null]
+  from_status int
+  to_status int [not null]
+  action varchar(20) [note: 'plan | start | pause | resume | finish | cancel | draft']
+  triggered_by bigint [ref: > app_user.id]
+  triggered_at timestamp [default: `now()`]
+  note text
+  Indexes {
+    (manuf_order_id, triggered_at)
+  }
+}
+
+// ═══════════════════════════════════════
+// Enum 補充（以 note 標記，非物理 table）
+// ═══════════════════════════════════════
+// manuf_order.status_select: 1=Draft → 2=Cancelled | 3=Planned → 4=In Progress ⇄ 5=Standby → 6=Finished | 7=Merged
+// operation_order.status_select: 同上（無 7）
+// bill_of_material.status_select: 1=Draft → 2=Validated → 3=Applicable → 4=Obsolete
+// prod_process.status_select: 同上
+// work_center.work_center_type_select: 1=人工, 2=機器, 3=人工與機器
+// work_center.cost_type_select: 1=每小時, 2=每循環, 3=每件
+// stock_move.type_select: 1=入庫, 2=出庫, 3=內部調撥
+// cost_sheet.calculation_type: 1=部分完工, 2=完工結算, 3=WIP, 4=BOM預估

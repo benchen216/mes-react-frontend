@@ -1,0 +1,43 @@
+[ACTIVITY] 製造工單完整生命週期
+[ACTOR] 生產管理師
+[ACTOR] 現場主管
+[ACTOR] 系統
+
+[INITIAL]
+[STEP:1] @生產管理師 進入製造工單列表頁
+[STEP:2] @生產管理師 點擊新增製造工單
+[STEP:3] @生產管理師 選擇產品、BOM、製程並填入數量
+[DECISION:3a] BOM 與製程是否皆為 Applicable 狀態
+  [BRANCH:3a:是]
+    [STEP:4] @生產管理師 存檔建立工單（狀態=Draft） {features/04-建立製造工單.feature}
+  [BRANCH:3a:否]
+    [STEP:3a.1] @生產管理師 收到BOM或製程未生效的提示訊息
+    [FINAL]
+[MERGE:3a]
+[STEP:5] @生產管理師 點擊Plan按鈕排程工單 {features/05-計畫製造工單.feature}
+[STEP:6] @系統 自動產生工序工單與待消耗清單並規劃日期
+[STEP:7] @生產管理師 確認工單狀態變為Planned
+[STEP:8] @現場主管 在工單詳情頁點擊Start按鈕開工 {features/06-開工製造工單.feature}
+[STEP:9] @系統 設定實際開始時間並將狀態變為In Progress
+[STEP:10] @現場主管 在工序列表中依次執行各工序
+[DECISION:10a] 生產過程是否需要暫停
+  [BRANCH:10a:需要暫停]
+    [STEP:10a.1] @現場主管 點擊Pause按鈕
+    [STEP:10a.2] @系統 將工單狀態變為Standby
+    [STEP:10a.3] @現場主管 點擊Resume按鈕恢復生產
+    [STEP:10a.4] @系統 將工單狀態變為In Progress
+  [BRANCH:10a:不需要暫停]
+[MERGE:10a]
+[STEP:11] @現場主管 確認所有工序完成
+[DECISION:11a] 是否所有工序皆已Finished
+  [BRANCH:11a:是]
+    [STEP:12] @系統 自動將工單狀態變為Finished {features/07-完工製造工單.feature}
+    [STEP:13] @系統 生成CostSheet成本表並計算成本價
+    [STEP:14] @系統 實現成品入庫StockMove
+    [STEP:15] @現場主管 在工單詳情頁查看成本表與入庫結果
+    [FINAL]
+  [BRANCH:11a:否]
+    [STEP:11a.1] @現場主管 手動點擊Finish按鈕完工
+    [STEP:11a.2] @系統 完成所有未完成工序並結算工單
+    [FINAL]
+[MERGE:11a]

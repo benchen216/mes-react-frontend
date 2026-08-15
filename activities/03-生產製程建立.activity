@@ -1,0 +1,34 @@
+[ACTIVITY] 生產製程建立流程
+[ACTOR] 生產管理師
+[ACTOR] 系統
+
+[INITIAL]
+[STEP:1] @生產管理師 進入Production processes列表頁
+[STEP:2] @生產管理師 點擊新增製程
+[STEP:3] @生產管理師 填入名稱、代碼、公司、對應產品
+[STEP:4] @生產管理師 在Phases面板加入工序定義ProdProcessLine
+[STEP:5] @生產管理師 為每道工序選擇工作中心WorkCenter
+[STEP:6] @系統 自動帶入WorkCenter的工時與成本預設值
+[STEP:7] @生產管理師 調整每循環時間、人工時間、產能
+[DECISION:7a] 是否啟用工序連續性
+  [BRANCH:7a:啟用]
+    [STEP:7a.1] @生產管理師 勾選operationContinuity
+  [BRANCH:7a:不啟用]
+[MERGE:7a]
+[DECISION:7b] 是否在工序層級管理消耗品
+  [BRANCH:7b:是]
+    [STEP:7b.1] @生產管理師 勾選isConsProOnOperation
+    [STEP:7b.2] @生產管理師 為每道工序設定toConsumeProdProductList
+  [BRANCH:7b:否]
+[MERGE:7b]
+[DECISION:7c] 是否支援委外
+  [BRANCH:7c:支援]
+    [STEP:7c.1] @生產管理師 勾選outsourcable
+    [STEP:7c.2] @生產管理師 設定委外廠商與工期
+  [BRANCH:7c:不支援]
+[MERGE:7c]
+[STEP:8] @生產管理師 設定庫存移動實現時機On Start或On Finish
+[STEP:9] @生產管理師 存檔（狀態=Draft）
+[STEP:10] @生產管理師 點擊Validate（狀態=Validated）
+[STEP:11] @生產管理師 點擊Make it applicable（狀態=Applicable） {features/09-製程生效.feature}
+[FINAL]

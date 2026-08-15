@@ -1,0 +1,27 @@
+[ACTIVITY] BOM建立與審核流程
+[ACTOR] 生產管理師
+[ACTOR] 系統
+
+[INITIAL]
+[STEP:1] @生產管理師 進入Bills of materials列表頁
+[STEP:2] @生產管理師 點擊新增BOM
+[STEP:3] @生產管理師 選擇產品並填入名稱與基準數量
+[STEP:4] @生產管理師 在Components面板加入BOM明細行
+[STEP:5] @生產管理師 為每個明細行選擇組件產品並設定數量與單位
+[DECISION:5a] 組件是否為半成品
+  [BRANCH:5a:是半成品]
+    [STEP:5a.1] @生產管理師 為該明細行指定子BOM
+    [STEP:5a.2] @生產管理師 確認子BOM已存在且為Applicable
+  [BRANCH:5a:不是半成品]
+[MERGE:5a]
+[STEP:6] @生產管理師 綁定生產製程ProdProcess
+[DECISION:6a] 是否需要預估成本
+  [BRANCH:6a:需要]
+    [STEP:6a.1] @生產管理師 點擊Compute cost price按鈕
+    [STEP:6a.2] @系統 依BOM結構計算預估成本價
+  [BRANCH:6a:不需要]
+[MERGE:6a]
+[STEP:7] @生產管理師 存檔（狀態=Draft）
+[STEP:8] @生產管理師 點擊Validate按鈕（狀態=Validated）
+[STEP:9] @生產管理師 點擊Make it applicable按鈕（狀態=Applicable） {features/08-BOM生效.feature}
+[FINAL]

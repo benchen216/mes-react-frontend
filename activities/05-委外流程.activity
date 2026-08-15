@@ -1,0 +1,24 @@
+[ACTIVITY] 委外流程
+[ACTOR] 生產管理師
+[ACTOR] 現場主管
+[ACTOR] 系統
+[ACTOR] 委外廠商
+
+[INITIAL]
+[STEP:1] @生產管理師 建立製程時勾選outsourcable並設定委外廠商
+[STEP:2] @生產管理師 建立製造工單時系統自動帶入outsourcing標記
+[STEP:3] @生產管理師 點擊Plan按鈕排程工單
+[DECISION:3a] 製程是否設定排程時自動產生採購單
+  [BRANCH:3a:是]
+    [STEP:3a.1] @系統 自動建立委外採購單PurchaseOrder
+    [STEP:3a.2] @生產管理師 在委外採購單列表查看自動產生的PO
+  [BRANCH:3a:否]
+[MERGE:3a]
+[STEP:4] @現場主管 在工單詳情頁點擊委外宣告按鈕
+[STEP:5] @現場主管 在委外宣告精靈中選擇要委外交付的產品與合作夥伴 {features/12-委外宣告.feature}
+[STEP:6] @系統 建立委外出庫StockMove將原料發送到委外廠商
+[STEP:7] @委外廠商 執行委外加工
+[STEP:8] @現場主管 在Subcontractors arrivals頁面建立委外入庫StockMove
+[STEP:9] @系統 將加工完成的半成品入庫
+[STEP:10] @現場主管 回到工單繼續後續工序或完工
+[FINAL]

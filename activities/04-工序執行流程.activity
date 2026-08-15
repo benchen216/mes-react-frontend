@@ -1,0 +1,43 @@
+[ACTIVITY] 工序執行流程
+[ACTOR] 作業員
+[ACTOR] 現場主管
+[ACTOR] 系統
+
+[INITIAL]
+[STEP:1] @現場主管 進入製造工單詳情頁查看工序列表
+[STEP:2] @現場主管 確認工單狀態為Planned或In Progress
+[STEP:3] @作業員 選擇第一道待執行工序
+[DECISION:3a] 該工序是否可開始
+  [BRANCH:3a:可開始]
+    [STEP:4] @作業員 點擊Start按鈕啟動工序 {features/10-工序開工.feature}
+    [STEP:5] @系統 記錄工序實際開始時間與啟動者
+    [STEP:6] @系統 建立OperationOrderDuration工時記錄
+  [BRANCH:3a:不可開始-前序未完成]
+    [STEP:3a.1] @作業員 收到工序連續性限制提示
+    [FINAL]
+[MERGE:3a]
+[STEP:7] @作業員 執行工序作業
+[DECISION:7a] 是否需要暫停工序
+  [BRANCH:7a:需要暫停]
+    [STEP:7a.1] @作業員 點擊Pause按鈕
+    [STEP:7a.2] @系統 記錄停止時間與停止者到Duration記錄
+    [STEP:7a.3] @作業員 點擊Resume按鈕恢復
+    [STEP:7a.4] @系統 建立新的Duration記錄
+  [BRANCH:7a:不需要]
+[MERGE:7a]
+[DECISION:7b] 是否需要部分完工
+  [BRANCH:7b:需要部分完工]
+    [STEP:7b.1] @作業員 點擊Partial Finish按鈕
+    [STEP:7b.2] @系統 生成部分完工成本表但不改變工序狀態
+  [BRANCH:7b:不需要]
+[MERGE:7b]
+[STEP:8] @作業員 點擊Finish按鈕完成工序 {features/11-工序完工.feature}
+[STEP:9] @系統 記錄工序實際結束時間並將狀態變為Finished
+[DECISION:9a] 是否還有下一道工序
+  [BRANCH:9a:有下一道 -> 4]
+  [BRANCH:9a:已是最後一道]
+    [STEP:10] @系統 檢查所有工序是否皆為Finished
+    [STEP:11] @系統 自動觸發製造工單完工流程
+    [FINAL]
+[MERGE:9a]
+[FINAL]
