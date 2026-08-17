@@ -21,3 +21,6 @@ npm-debug.log*
 .env
 .env.*
 !.env.example
+
+# graphify (generated, regenerate with `graphify update .`)
+graphify-out/
