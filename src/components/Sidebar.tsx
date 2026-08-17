@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Cog, ClipboardList, Factory, LayoutDashboard, Package, Settings, Wrench } from 'lucide-react';
+import { ChevronDown, ChevronRight, ClipboardList, Factory, FileText, LayoutDashboard, MonitorSmartphone, Package, Settings, Wrench } from 'lucide-react';
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 
@@ -20,6 +20,9 @@ interface NavGroup {
 }
 
 const navItems: (NavItem | NavGroup)[] = [
+  { to: '/spec', label: '規格書', icon: FileText },
+  { to: '/shop/concept', label: '現場概念', icon: MonitorSmartphone },
+  { to: '/shop', label: '現場工位', icon: MonitorSmartphone },
   { to: '/', label: '儀表板', icon: LayoutDashboard },
   { to: '/manuf-orders', label: '製造工單', icon: ClipboardList },
   { to: '/operations', label: '工序工單', icon: Factory },
@@ -104,7 +107,7 @@ export function Sidebar() {
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.to === '/'}
+              end={item.to === '/' || item.to === '/shop'}
               className={({ isActive }) =>
                 `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                   isActive

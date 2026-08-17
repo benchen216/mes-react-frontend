@@ -64,6 +64,24 @@ export function Login() {
           <p className="mt-5 text-center text-xs text-gray-400">
             提示：此為原型展示，任意帳號密碼皆可登入
           </p>
+          <a
+            href="/spec"
+            className="mt-4 block text-center text-sm font-medium text-indigo-600 hover:text-indigo-800"
+          >
+            看規格書排版版本
+          </a>
+          <a
+            href="/shop/concept"
+            className="mt-2 block text-center text-sm font-medium text-indigo-600 hover:text-indigo-800"
+          >
+            先看現場概念長相
+          </a>
+          <a
+            href="/shop"
+            className="mt-2 block text-center text-sm text-gray-500 hover:text-gray-800"
+          >
+            或進可操作的五工序 Demo
+          </a>
         </div>
       </div>
     </div>
