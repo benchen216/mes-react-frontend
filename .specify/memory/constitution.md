@@ -1,50 +1,74 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# MES 現場執行系統 Constitution
+
+本文件是本專案的最高層決策依據。當 spec、plan、tasks 與本文件衝突時，以本文件為準；要違反本文件的任一原則，必須在 plan 的 Complexity Tracking 明確記錄理由，不得默默繞過。
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. 規格是唯一事實來源
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+`specs/<feature>/spec.md` 是行為的唯一定義。程式碼、畫面、mock 資料都不得成為規格的來源。
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+- 規格沒寫的行為，實作時**不得自行發明並當成既定事實**。要嘛在 spec 補上並標註，要嘛標 `[NEEDS CLARIFICATION]` 留在原地。
+- 畫面上出現的每一個欄位、每一句系統回話、每一個狀態字，都必須能回指到 spec 的章節編號或規則編號（R-xx）。
+- 支援文件（flows、screens、industry-check）是 spec 的衍生物，不是平行的第二份規格。spec 改了，衍生文件在**同一個 commit** 內同步。
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### II. 製程由設定驅動，不由程式寫死
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+工序順序、站點、記錄欄位、不良代碼、報廢門檻，全部來自資料，不來自 `if` 判斷。
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+- 新增一條產線、改變工序數量或順序，**不得需要修改元件程式碼**。判準：把產線 A 的定義換成產線 B 的定義，畫面必須自己長對。
+- 表單欄位一律由欄位定義動態渲染。任何硬編碼的欄位清單都是違規。
+- 允許寫死的只有兩類：工序狀態機的轉移規則本身（見原則 IV），以及跨產線共用的畫面骨架。
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### III. 紀錄只增不覆蓋（NON-NEGOTIABLE）
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+已經發生的事實永遠不被改寫。這是稽核能通過的前提，沒有例外。
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+- 退回重做產生「第 N 次」的新紀錄，**絕不覆蓋前一次**。
+- 欄位設定變更只影響變更之後建立的紀錄。歷史紀錄綁定它建立當下的欄位版本。
+- 欄位只能停用，不能刪除。停用後歷史紀錄與報表照常可查。
+- 作業員與時間戳在寫入後不可修改，不提供任何「編輯」入口。
+
+### IV. 當下阻擋，不事後稽核
+
+違規操作在按下按鈕的當下就被拒絕，而不是產生一筆待稽核的紀錄。
+
+- 前置工序未完成時，「開始」被拒絕，且**工單狀態完全不變**、不留下任何紀錄、狀態板不跳動。
+- 必填未填、數值超範圍、分流數量加總不符，一律阻擋送出，不允許「先存後補」。
+- 每一次阻擋都必須回一句明確指出原因與下一步的訊息（例：「還不能開始。需先完成『沖壓品檢』。」），不得只顯示通用錯誤。
+
+### V. 誠實的能力邊界
+
+對客戶承諾「管理員能自己改什麼、什麼必須找供應商」必須有一份明列的清單，且清單與實作一致。
+
+- 任何「這個以後可以自己設定」的口頭承諾，若未在 spec 的自助能力表中，視同未承諾。
+- 範圍外項目必須明文列出，不得靠沉默處理。
+- Demo 用的 mock 行為必須與真實可交付行為在文件上可區分，不得讓 demo 效果被誤讀為已交付功能。
+
+## 技術約束
+
+本專案目前是**純前端原型**，用於售前情境展示與規格驗證，尚無後端。
+
+- 技術棧固定為 React 18 + TypeScript（strict）+ Vite 5 + Tailwind 4 + react-router-dom 6。新增執行期相依需在 plan 中說明理由。
+- 狀態機邏輯集中在 `src/lib/`，與 React 元件解耦，必須可在無 DOM 的情況下單獨推演。
+- Mock 資料集中在 `src/data/`，型別集中在 `src/types/`。替換為真實 API 時，改動範圍不得擴散到 `src/pages/` 與 `src/components/`。
+- 遵循使用者全域規則的 web 分層規範：檔案 200–400 行為常態、800 行為上限；設計 token 走 CSS 變數；動畫僅使用 `transform` / `opacity`。
+- 現場終端為觸控操作，主要操作按鈕的可點擊區域不得小於 44×44 px。
+
+## 開發流程與品質閘門
+
+- 流程順序為 constitution → specify → clarify → plan → tasks → implement → analyze。**跳過 clarify 直接進 plan 是違規**，除非 spec 中已無 `[NEEDS CLARIFICATION]` 標記。
+- spec 中殘留任何 `[NEEDS CLARIFICATION]` 時，該項目不得進入 tasks，也不得被實作成任意一種猜測版本。
+- 撰寫與審查必須是分開的兩道，不得在同一段脈絡內自我核可。
+- 提交前檢查：`npm run build`（含 `tsc`）必須通過；不得留下 `console.log`、`TODO` 佔位、或未接線的空按鈕。
+- 未實作的功能一律不放進畫面。放進畫面卻按不動的按鈕，在本專案視為缺陷而非佔位。
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+- 本文件凌駕其他慣例。修訂需記錄版本、日期與變更理由。
+- 版本號採 MAJOR.MINOR.PATCH：MAJOR 為移除或反轉既有原則；MINOR 為新增原則或大幅擴充條款；PATCH 為釐清措辭。
+- 每次 plan 都必須執行 Constitution Check，並在文件中留下逐條的通過或例外記錄。
+- 原則 III 為 NON-NEGOTIABLE，不接受任何例外記錄；要違反它必須先修訂本文件並提升 MAJOR 版本。
+- 執行期的開發指引見 `CLAUDE.md` 與 `~/.claude/rules/`。
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2026-08-17 | **Last Amended**: 2026-08-17
