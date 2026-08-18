@@ -56,9 +56,6 @@ export function WorkstationTerminal() {
   const lot = order?.lots.find((item) => item.id === (card?.lotId ?? resolvedLot));
   const fields = enabledFieldsForOp(shop.state, opId);
   const message = shop.state.messages[opId];
-  const pendingReview = shop.state.scrapReviews.find(
-    (review) => review.orderSeq === order?.seq && review.status === 'pending' && review.opId === opId,
-  );
 
   useEffect(() => {
     setLotId(shop.defaultLot(opId));
@@ -272,13 +269,7 @@ export function WorkstationTerminal() {
               )}
             </dl>
 
-            {pendingReview && (
-              <p className="mt-4 border border-[#e67e22] px-4 py-3 text-[#e67e22]">
-                報廢審核待線長處理。本站暫停判定。
-              </p>
-            )}
-
-            {!formMode && !pendingReview && (
+            {!formMode && (
               <div className="mt-6 space-y-3">
                 {card.startVisible && (
                   <button

@@ -75,7 +75,7 @@ export function StatusBoard({ size = 'pane' }: { size?: 'pane' | 'wall' }) {
         </div>
         <div className="text-right">
           <p className="font-shop-mono text-[11px] tracking-[0.18em] text-[#8a8a8a]">工單</p>
-          <p className={`font-shop font-extrabold ${order.status === '已結案' ? 'text-[#4af626]' : order.status === '待審核' ? 'text-[#e61919]' : 'text-[#e67e22]'}`}>
+          <p className={`font-shop font-extrabold ${order.status === '已結案' ? 'text-[#4af626]' : 'text-[#e67e22]'}`}>
             {order.status}
           </p>
           <p className="font-shop-mono text-sm text-[#8a8a8a]">{clock}</p>

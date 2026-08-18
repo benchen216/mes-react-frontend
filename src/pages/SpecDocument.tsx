@@ -11,7 +11,6 @@ type ChapterId =
   | 's4'
   | 's5'
   | 's6'
-  | 's7'
   | 'rules'
   | 'out'
   | 'faq';
@@ -24,12 +23,11 @@ const CHAPTERS: { id: ChapterId; no: string; label: string }[] = [
   { id: 's2', no: '3', label: '搶跑被擋' },
   { id: 's3', no: '4', label: '退回重做' },
   { id: 's4', no: '5', label: '部分報廢' },
-  { id: 's5', no: '6', label: '整單報廢' },
-  { id: 's6', no: '7', label: '產線 B' },
-  { id: 's7', no: '8', label: '加欄位' },
-  { id: 'rules', no: '9', label: '規則附錄' },
-  { id: 'out', no: '10', label: '範圍外' },
-  { id: 'faq', no: '11', label: '五個問題' },
+  { id: 's5', no: '6', label: '產線 B' },
+  { id: 's6', no: '7', label: '加欄位' },
+  { id: 'rules', no: '8', label: '規則附錄' },
+  { id: 'out', no: '9', label: '範圍外' },
+  { id: 'faq', no: '10', label: '五個問題' },
 ];
 
 export function SpecDocument() {
@@ -80,7 +78,6 @@ export function SpecDocument() {
         {chapter === 's4' && <S4 />}
         {chapter === 's5' && <S5 />}
         {chapter === 's6' && <S6 />}
-        {chapter === 's7' && <S7 />}
         {chapter === 'rules' && <Rules />}
         {chapter === 'out' && <Out />}
         {chapter === 'faq' && <Faq />}
@@ -193,7 +190,7 @@ function Lines() {
         rows={[
           ['現場作業員', '王沖壓、陳焊接等', '工位終端', '開始 / 完成自己站點的工序，填寫該站欄位'],
           ['檢驗員', '李檢驗、吳目檢', '工位終端（品檢模式）', '判定合格 / 不合格，分流數量，填不良代碼'],
-          ['線長 / 班長', '產線負責人', '狀態板 + 工單詳情', '看全線狀態，處理報廢審核'],
+          ['線長 / 班長', '產線負責人', '狀態板 + 工單詳情', '看全線狀態'],
           ['廠內流程管理員', '製造部或品保部指定人員', '系統設定', '動態新增 / 調整記錄欄位，不需 IT 介入'],
         ]}
       />
@@ -342,40 +339,7 @@ function S4() {
 
 function S5() {
   return (
-    <Doc no="6" title="情境五：整單報廢">
-      <p className="max-w-[52ch] text-lg leading-relaxed">
-        成品品檢發現整批鍍層附著力不合格，全數無法出貨。合格 0、重工 0、報廢 9,700。
-      </p>
-      <Screen
-        lines={[
-          '報廢數 9,700 已超過本工單允收上限（5%）。',
-          '已送出報廢審核，待「線長」核准後生效。工單暫停於「成品品檢」。',
-        ]}
-      />
-      <p className="mt-8 max-w-[52ch] leading-relaxed">
-        報廢是有金額的。低於門檻由檢驗員當場決定，超過門檻必須有人簽字。門檻是廠內管理員可以設定的數字，不是寫死的。
-      </p>
-      <div className="mt-8 grid gap-px bg-[#111] md:grid-cols-2">
-        <div className="bg-[#f4f4f0] px-5 py-5">
-          <p className="font-shop-mono text-[11px] tracking-[0.16em] text-[#666]">線長核准</p>
-          <p className="mt-3 font-shop text-lg font-bold leading-snug">
-            報廢審核已核准。工單 MO-FR-27-005 結案，完工數量 0，報廢 9,700。
-          </p>
-        </div>
-        <div className="bg-[#f4f4f0] px-5 py-5">
-          <p className="font-shop-mono text-[11px] tracking-[0.16em] text-[#666]">線長駁回</p>
-          <p className="mt-3 font-shop text-lg font-bold leading-snug">
-            報廢審核已駁回。理由：建議先送重工評估。工單退回「成品品檢」，請重新判定。
-          </p>
-        </div>
-      </div>
-    </Doc>
-  );
-}
-
-function S6() {
-  return (
-    <Doc no="7" title="情境六：產線 B">
+    <Doc no="6" title="情境五：產線 B">
       <p className="max-w-[52ch] text-lg leading-relaxed">
         前面都在產線 A。換到產線 B，證明系統沒有為金屬沖壓寫死任何東西。
       </p>
@@ -417,9 +381,9 @@ function S6() {
   );
 }
 
-function S7() {
+function S6() {
   return (
-    <Doc no="8" title="情境七：管理員動態新增欄位">
+    <Doc no="7" title="情境六：管理員動態新增欄位">
       <p className="max-w-[52ch] text-lg leading-relaxed">
         品保部要求：從下週起，雷射焊接站要記錄氬氣流量。沒有 MES 的工廠會印一張新表格。寫死欄位的系統會開需求單等下一版。
       </p>
@@ -455,9 +419,9 @@ function S7() {
         rows={[
           ['新增 / 修改 / 停用記錄欄位', '欄位之間的計算式（例如良率自動算）'],
           ['調整欄位必填、有效範圍、選項清單', '欄位觸發的自動流程（例如超標自動通知）'],
-          ['調整報廢審核門檻百分比', '與外部系統（ERP、治具、量測儀）的介接'],
-          ['調整不良代碼、報廢原因代碼的清單', '新增一種全新的資料型別'],
-          ['調整站點與作業員的對應', '改變工序推進的基本邏輯'],
+          ['調整不良代碼、報廢原因代碼的清單', '與外部系統（ERP、治具、量測儀）的介接'],
+          ['調整站點與作業員的對應', '新增一種全新的資料型別'],
+          ['—', '改變工序推進的基本邏輯'],
         ]}
       />
       <Pull>承諾「什麼都能自己改」是售後糾紛的來源。承諾「這些能自己改，那些要找我們」才是可交付的。</Pull>
@@ -467,7 +431,7 @@ function S7() {
 
 function Rules() {
   return (
-    <Doc no="9" title="規則附錄">
+    <Doc no="8" title="規則附錄">
       <p className="max-w-[52ch] text-lg leading-relaxed">給客戶的技術窗口或 IT 主管查驗。業務端不必從這裡開始。</p>
       <h3 className="mt-10 font-shop text-xl font-extrabold">9.1 工序推進</h3>
       <RuleList
@@ -481,7 +445,7 @@ function Rules() {
           ['R-07', '必填欄位未填完，「完成」無法送出。'],
           ['R-08', '數值欄位超出有效範圍時阻擋送出；可覆寫則必須填理由。'],
           ['R-09', '每次「開始」與「完成」都記錄作業員與時間戳，不可事後修改。'],
-          ['R-10', '工單所有工序完成且最終品檢合格後，工單自動結案。'],
+          ['R-10', '工單所有工序完成且最終品檢合格後，或最終品檢全數報廢後，工單自動結案。'],
         ]}
       />
       <h3 className="mt-10 font-shop text-xl font-extrabold">9.2 退回與報廢</h3>
@@ -493,13 +457,10 @@ function Rules() {
           ['R-14', '不合格時，「不良代碼」為必填。'],
           ['R-15', '合格數 + 重工數 + 報廢數 = 送檢數。不相等則阻擋送出。'],
           ['R-16', '報廢數 > 0 時，「報廢原因」為必填。'],
-          ['R-17', '報廢數佔比超過設定門檻（預設 5%）時，觸發主管審核。'],
-          ['R-18', '審核核准後報廢生效；駁回則退回該品檢工序重新判定。'],
           ['R-19', '報廢數量的成本仍歸屬於該工單。'],
           ['R-20', '重工批與主批獨立推進，主批不需等待重工批。'],
           ['R-21', '重工批完成後併回主批，起始工序為主批當前工序的前一站。'],
           ['R-22', '工單完工數量 = 主批合格數 + 各重工批最終合格數。'],
-          ['R-23', '最終品檢不合格且重工數為 0、報廢數等於送檢數者，視為整單報廢，一律走 R-17。'],
         ]}
       />
       <h3 className="mt-10 font-shop text-xl font-extrabold">9.4 狀態機</h3>
@@ -507,7 +468,7 @@ function Rules() {
 {`工序：尚未開始 ──開始──▶ 進行中 ──完成/合格──▶ 已完成
                          └──不合格──▶ 不合格 ──▶ 前站轉為「可重做」
 工單：待生產 ──首站開始──▶ 進行中 ──末站品檢合格──▶ 已結案
-                         ├──報廢超門檻──▶ 待審核 ──核准──▶ 已結案（報廢）
+                         ├──末站全數報廢──▶ 已結案（報廢）
                          └──料件短缺──▶ 暫停（等料）`}
       </pre>
       <h3 className="mt-10 font-shop text-xl font-extrabold">9.5 權限</h3>
@@ -517,7 +478,6 @@ function Rules() {
           ['開始 / 完成生產工序', '本站', '—', '全線', '—'],
           ['品檢判定合格 / 不合格', '—', '本站', '全線', '—'],
           ['數量分流', '—', '本站', '全線', '—'],
-          ['核准報廢審核', '—', '—', '是', '—'],
           ['覆寫超出範圍的量測值', '需填理由', '需填理由', '需填理由', '—'],
           ['查看追溯紀錄', '本站', '全線', '全線', '全線'],
           ['新增 / 修改記錄欄位', '—', '—', '—', '是'],
@@ -529,7 +489,7 @@ function Rules() {
 
 function Out() {
   return (
-    <Doc no="10" title="本版範圍外">
+    <Doc no="9" title="本版範圍外">
       <p className="max-w-[52ch] text-lg leading-relaxed">明確列出，避免售前期待與交付落差。</p>
       <GridTable
         head={['項目', '狀態']}
@@ -556,7 +516,7 @@ function Faq() {
     ['出事了要多久查得出原因？', '輸入工單號，所有站點、所有次數、每一次的人 / 時間 / 量測值 / 料號 / 模具都在一頁上。'],
   ];
   return (
-    <Doc no="11" title="客戶常問的五個問題">
+    <Doc no="10" title="客戶常問的五個問題">
       <div className="divide-y divide-[#111] border-y border-[#111]">
         {items.map(([q, a]) => (
           <article key={q} className="grid gap-4 py-8 md:grid-cols-[minmax(0,16rem)_1fr]">

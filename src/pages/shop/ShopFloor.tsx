@@ -1,25 +1,22 @@
 import { Link } from 'react-router-dom';
 import { useShop } from '../../hooks/useShop';
 import { FieldSettings } from './FieldSettings';
-import { ScrapReview } from './ScrapReview';
 import { StatusBoard } from './StatusBoard';
 import { TraceView } from './TraceView';
 import { WorkstationTerminal } from './WorkstationTerminal';
 
-export type ShopMode = 'split' | 'terminal' | 'board' | 'trace' | 'review' | 'settings';
+export type ShopMode = 'split' | 'terminal' | 'board' | 'trace' | 'settings';
 
 const NAV: { to: string; label: string; mode: ShopMode | 'concept' }[] = [
   { to: '/shop', label: '工位 + 狀態板', mode: 'split' },
   { to: '/shop/terminal', label: '工位終端', mode: 'terminal' },
   { to: '/shop/board', label: '狀態板', mode: 'board' },
   { to: '/shop/trace', label: '追溯', mode: 'trace' },
-  { to: '/shop/review', label: '報廢審核', mode: 'review' },
   { to: '/shop/settings', label: '欄位設定', mode: 'settings' },
 ];
 
 export function ShopFloor({ mode }: { mode: ShopMode }) {
-  const { reset, state } = useShop();
-  const pending = state.scrapReviews.filter((item) => item.status === 'pending').length;
+  const { reset } = useShop();
 
   return (
     <div className="shop-floor flex min-h-[100dvh] flex-col bg-[#0a0a0a] text-[#eaeaea]">
@@ -30,7 +27,6 @@ export function ShopFloor({ mode }: { mode: ShopMode }) {
             {NAV.map((item) => (
               <Link key={item.to} className={mode === item.mode ? 'text-[#eaeaea]' : 'hover:text-[#eaeaea]'} to={item.to}>
                 {item.label}
-                {item.mode === 'review' && pending > 0 ? ` (${pending})` : ''}
               </Link>
             ))}
             <Link className="hover:text-[#eaeaea]" to="/shop/concept">
@@ -67,11 +63,6 @@ export function ShopFloor({ mode }: { mode: ShopMode }) {
       {mode === 'trace' && (
         <div className="min-h-0 flex-1">
           <TraceView />
-        </div>
-      )}
-      {mode === 'review' && (
-        <div className="min-h-0 flex-1">
-          <ScrapReview />
         </div>
       )}
       {mode === 'settings' && (

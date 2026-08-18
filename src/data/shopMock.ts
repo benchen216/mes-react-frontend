@@ -113,10 +113,8 @@ export function createInitialShopState(): ShopState {
     ],
     inventory: { 'FR-27-BZ-A': 0, 'MON-27-A': 0 },
     fieldDefs: INITIAL_FIELD_DEFS.map((field) => ({ ...field, options: field.options?.map((opt) => ({ ...opt })) })),
-    scrapThresholdPct: 5,
     defectCodes: INITIAL_DEFECT_CODES.map((item) => ({ ...item })),
     scrapReasons: INITIAL_SCRAP_REASONS.map((item) => ({ ...item })),
     messages: {},
-    scrapReviews: [],
   };
 }

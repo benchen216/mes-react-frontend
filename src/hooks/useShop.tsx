@@ -17,7 +17,7 @@ import type {
   ShopState,
 } from '../types/shop';
 
-const STORAGE_KEY = 'mes.shop.v1';
+const STORAGE_KEY = 'mes.shop.v2';
 
 interface ShopContextValue {
   state: ShopState;
@@ -36,11 +36,8 @@ interface ShopContextValue {
     scrapReason?: string;
     overrideReason?: string;
   }) => void;
-  approveScrap: (reviewId: string) => void;
-  rejectScrap: (reviewId: string, reason: string) => void;
   addField: (field: FieldDef) => void;
   updateField: (code: string, patch: Partial<FieldDef>) => void;
-  setThreshold: (pct: number) => void;
   setInventory: (productCode: string, qty: number) => void;
   addCode: (kind: 'defect' | 'scrap', item: { code: string; label: string; enabled: boolean }) => void;
   reset: () => void;
@@ -66,7 +63,6 @@ function loadState(): ShopState {
       defectCodes: parsed.defectCodes?.length ? parsed.defectCodes : fresh.defectCodes,
       scrapReasons: parsed.scrapReasons?.length ? parsed.scrapReasons : fresh.scrapReasons,
       messages: parsed.messages ?? {},
-      scrapReviews: parsed.scrapReviews ?? [],
       inventory: { ...fresh.inventory, ...parsed.inventory },
     };
   } catch {
@@ -110,24 +106,12 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     setState((prev) => reduceShop(prev, { type: 'qcSubmit', ...payload }));
   }, []);
 
-  const approveScrap = useCallback((reviewId: string) => {
-    setState((prev) => reduceShop(prev, { type: 'approveScrap', reviewId }));
-  }, []);
-
-  const rejectScrap = useCallback((reviewId: string, reason: string) => {
-    setState((prev) => reduceShop(prev, { type: 'rejectScrap', reviewId, reason }));
-  }, []);
-
   const addField = useCallback((field: FieldDef) => {
     setState((prev) => reduceShop(prev, { type: 'addField', field }));
   }, []);
 
   const updateField = useCallback((code: string, patch: Partial<FieldDef>) => {
     setState((prev) => reduceShop(prev, { type: 'updateField', code, patch }));
-  }, []);
-
-  const setThreshold = useCallback((pct: number) => {
-    setState((prev) => reduceShop(prev, { type: 'setThreshold', pct }));
   }, []);
 
   const setInventory = useCallback((productCode: string, qty: number) => {
@@ -154,11 +138,8 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       start,
       complete,
       qcSubmit,
-      approveScrap,
-      rejectScrap,
       addField,
       updateField,
-      setThreshold,
       setInventory,
       addCode,
       reset,
@@ -167,7 +148,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       boardFor: (seq) => boardForOrder(state, seq),
       defaultLot: (opId) => defaultLotId(state, opId),
     }),
-    [state, start, complete, qcSubmit, approveScrap, rejectScrap, addField, updateField, setThreshold, setInventory, addCode, reset],
+    [state, start, complete, qcSubmit, addField, updateField, setInventory, addCode, reset],
   );
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;

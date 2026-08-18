@@ -16,7 +16,6 @@ export function FieldSettings() {
   const [min, setMin] = useState('12');
   const [max, setMax] = useState('20');
   const [optionsText, setOptionsText] = useState('');
-  const [threshold, setThreshold] = useState(String(shop.state.scrapThresholdPct));
   const [invCode, setInvCode] = useState('FR-27-BZ-A');
   const [invQty, setInvQty] = useState(String(shop.state.inventory['FR-27-BZ-A'] ?? 0));
   const [defCode, setDefCode] = useState('');
@@ -146,20 +145,8 @@ export function FieldSettings() {
             ))}
           </ul>
 
-          <h3 className="mt-8 font-shop text-xl font-extrabold">報廢門檻 / 庫存 / 代碼</h3>
+          <h3 className="mt-8 font-shop text-xl font-extrabold">庫存 / 代碼</h3>
           <div className="mt-4 grid gap-4">
-            <Field label="報廢審核門檻 %">
-              <div className="flex gap-2">
-                <input value={threshold} onChange={(e) => setThreshold(e.target.value)} className={inputClass} />
-                <button
-                  type="button"
-                  onClick={() => shop.setThreshold(Number(threshold))}
-                  className="border border-[#3a3a3a] px-4 font-shop-mono text-xs"
-                >
-                  套用
-                </button>
-              </div>
-            </Field>
             <Field label="料件可用量">
               <div className="flex gap-2">
                 <select value={invCode} onChange={(e) => setInvCode(e.target.value)} className={inputClass}>

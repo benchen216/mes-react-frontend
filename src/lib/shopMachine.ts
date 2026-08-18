@@ -251,16 +251,24 @@ function replaceOrder(state: ShopState, order: OrderState): ShopState {
 
 function closeLotIfLast(order: OrderState, lot: LotState, opId: string, state: ShopState): { order: OrderState; state: ShopState } {
   const last = lastOp(order.lineId);
-  if (opId !== last.id || lot.gates[opId] !== 'done' || lot.qty <= 0) return { order, state };
-  let nextOrder: OrderState = { ...order, completedQty: order.completedQty + lot.qty };
-  const pending = state.scrapReviews.some((review) => review.orderSeq === order.seq && review.status === 'pending');
+  if (opId !== last.id || lot.gates[opId] !== 'done') return { order, state };
+
+  let nextOrder: OrderState = order;
+  let nextState = state;
+  if (lot.qty > 0) {
+    nextOrder = { ...order, completedQty: order.completedQty + lot.qty };
+    nextState = {
+      ...state,
+      inventory: {
+        ...state.inventory,
+        [nextOrder.productCode]: (state.inventory[nextOrder.productCode] ?? 0) + lot.qty,
+      },
+    };
+  }
+
   const allDone = nextOrder.lots.every((item) => item.qty <= 0 || item.gates[last.id] === 'done');
-  if (allDone && !pending) nextOrder = { ...nextOrder, status: '已結案' };
-  const inventory = {
-    ...state.inventory,
-    [nextOrder.productCode]: (state.inventory[nextOrder.productCode] ?? 0) + lot.qty,
-  };
-  return { order: nextOrder, state: { ...state, inventory } };
+  if (allDone) nextOrder = { ...nextOrder, status: '已結案' };
+  return { order: nextOrder, state: nextState };
 }
 
 function finishOp(lot: LotState, opId: string): LotState {
@@ -311,7 +319,6 @@ function reduceStart(state: ShopState, opId: string, lotId: string): ShopState {
   const lot = order ? findLot(order, lotId) : undefined;
   if (!op || !order || !lot) return withMessage(state, opId, '找不到工單。', 'error');
   if (order.status === '已結案') return withMessage(state, opId, '工單已結束。', 'info');
-  if (order.status === '待審核') return withMessage(state, opId, '工單暫停於報廢審核，待線長處理。', 'warn');
 
   if (lot.runningOpId === opId) {
     return withMessage(state, opId, `本關進行中。作業員：${lot.runningOperator}。開始：${formatClock(lot.runningStartedAt ?? nowIso())}`, 'ok');
@@ -410,40 +417,6 @@ function reduceQc(state: ShopState, action: Extract<ShopAction, { type: 'qcSubmi
   if (issue) return withMessage(state, action.opId, issue.message, 'error');
 
   const snapshot = fieldsForOp(state, action.opId);
-  const last = lastOp(order.lineId);
-  const inspected = lot.qty;
-  const scrapRatio = inspected === 0 ? 0 : action.scrapQty / inspected;
-  const wholeScrap = action.opId === last.id && action.reworkQty === 0 && action.scrapQty === inspected;
-  const overThreshold = scrapRatio > state.scrapThresholdPct / 100;
-  if (action.scrapQty > 0 && (overThreshold || wholeScrap)) {
-    const review = {
-      id: uid('rev'),
-      orderSeq: order.seq,
-      lotId: lot.id,
-      opId: action.opId,
-      operator: lot.runningOperator ?? op.operator,
-      startedAt: lot.runningStartedAt ?? nowIso(),
-      inspectedQty: inspected,
-      passQty: action.passQty,
-      reworkQty: action.reworkQty,
-      scrapQty: action.scrapQty,
-      thresholdPct: state.scrapThresholdPct,
-      defectCodes: action.defectCodes,
-      scrapReason: action.scrapReason ?? '',
-      values: action.values,
-      fieldSnapshot: snapshot,
-      status: 'pending' as const,
-      createdAt: nowIso(),
-    };
-    const paused = { ...order, status: '待審核' as const };
-    return withMessage(
-      { ...replaceOrder(state, paused), scrapReviews: [...state.scrapReviews, review] },
-      action.opId,
-      `報廢數 ${action.scrapQty.toLocaleString('zh-TW')} 已超過本工單允收上限（${state.scrapThresholdPct}%）。已送出報廢審核，待「線長」核准後生效。工單暫停於「${op.name}」。`,
-      'warn',
-    );
-  }
-
   return applyQcResult(state, order, lot, action, snapshot);
 }
 
@@ -472,7 +445,6 @@ function applyQcResult(
     const nextOrder = {
       ...replaceLot(order, nextLot),
       records: [...order.records, record],
-      status: order.status === '待審核' ? '進行中' : order.status,
     };
     const locked = action.opId === 'A_STAMP_QC' ? '焊接尚未開始。' : '';
     return withMessage(
@@ -521,17 +493,21 @@ function applyQcResult(
     };
   }
 
-  const closed = action.passQty > 0 ? closeLotIfLast(nextOrder, nextLot, action.opId, state) : { order: nextOrder, state };
+  const closed = closeLotIfLast(nextOrder, nextLot, action.opId, state);
   nextOrder = closed.order;
-  if (nextOrder.status === '待審核') nextOrder = { ...nextOrder, status: '進行中' };
 
   const next = nextAfter(action.opId);
   let message: string;
-  if (action.verdict === 'partial' || action.reworkQty > 0 || action.scrapQty > 0) {
+  if (nextOrder.status === '已結案' && action.scrapQty > 0 && action.passQty === 0 && action.reworkQty === 0) {
+    message = `報廢 ${action.scrapQty.toLocaleString('zh-TW')}。工單 ${nextOrder.seq} 結案，完工數量 ${nextOrder.completedQty.toLocaleString('zh-TW')}，報廢 ${nextOrder.scrapQty.toLocaleString('zh-TW')}。`;
+  } else if (action.verdict === 'partial' || action.reworkQty > 0 || action.scrapQty > 0) {
     const bits = [`主批 ${action.passQty.toLocaleString('zh-TW')} 個現在${next ? `可到${next.name}` : '已完成本關'}。`];
     if (action.reworkQty > 0) {
       const back = OPS_BY_ID[action.returnOpId ?? '']?.name ?? '前站';
       bits.push(`重工批 ${action.reworkQty.toLocaleString('zh-TW')} 個現在在${back}，尚未開始。`);
+    }
+    if (nextOrder.status === '已結案') {
+      bits.push(`工單已結束。完工 ${nextOrder.completedQty.toLocaleString('zh-TW')}，報廢 ${nextOrder.scrapQty.toLocaleString('zh-TW')}。`);
     }
     message = bits.join('');
   } else if (!next || nextOrder.status === '已結案') {
@@ -541,72 +517,6 @@ function applyQcResult(
   }
 
   return withMessage(replaceOrder(closed.state, nextOrder), action.opId, message, action.scrapQty > 0 ? 'warn' : 'ok');
-}
-
-function reduceApprove(state: ShopState, reviewId: string): ShopState {
-  const review = state.scrapReviews.find((item) => item.id === reviewId);
-  if (!review || review.status !== 'pending') return state;
-  const order = state.orders.find((item) => item.seq === review.orderSeq);
-  const lot = order ? findLot(order, review.lotId) : undefined;
-  if (!order || !lot) return state;
-
-  const reviews = state.scrapReviews.map((item) => (item.id === reviewId ? { ...item, status: 'approved' as const, decidedAt: nowIso() } : item));
-  const nextLot = clearRun({
-    ...lot,
-    qty: review.passQty,
-    gates: { ...lot.gates, [review.opId]: 'done' },
-  });
-  let nextOrder: OrderState = {
-    ...replaceLot(order, nextLot),
-    records: [
-      ...order.records,
-      makeRecord(
-        order,
-        { ...lot, runningOperator: review.operator, runningStartedAt: review.startedAt },
-        review.opId,
-        review.passQty > 0 ? 'partial' : 'failed',
-        review.values,
-        review.fieldSnapshot,
-        {
-          passQty: review.passQty,
-          reworkQty: review.reworkQty,
-          scrapQty: review.scrapQty,
-          defectCodes: review.defectCodes,
-          scrapReason: review.scrapReason,
-        },
-      ),
-    ],
-    scrapQty: order.scrapQty + review.scrapQty,
-    status: '已結案',
-    completedQty: order.completedQty + review.passQty,
-  };
-  return withMessage(
-    { ...replaceOrder(state, nextOrder), scrapReviews: reviews },
-    review.opId,
-    `報廢審核已核准。工單 ${order.seq} 結案，完工數量 ${nextOrder.completedQty.toLocaleString('zh-TW')}，報廢 ${nextOrder.scrapQty.toLocaleString('zh-TW')}。`,
-    'ok',
-  );
-}
-
-function reduceReject(state: ShopState, reviewId: string, reason: string): ShopState {
-  const review = state.scrapReviews.find((item) => item.id === reviewId);
-  if (!review || review.status !== 'pending') return state;
-  if (!reason.trim()) {
-    return withMessage(state, review.opId, '駁回時必須填寫理由。', 'error');
-  }
-  const order = state.orders.find((item) => item.seq === review.orderSeq);
-  if (!order) return state;
-  const reviews = state.scrapReviews.map((item) =>
-    item.id === reviewId ? { ...item, status: 'rejected' as const, rejectReason: reason.trim(), decidedAt: nowIso() } : item,
-  );
-  const nextOrder = { ...order, status: '進行中' as const };
-  const op = OPS_BY_ID[review.opId];
-  return withMessage(
-    { ...replaceOrder(state, nextOrder), scrapReviews: reviews },
-    review.opId,
-    `報廢審核已駁回。理由：${reason.trim()}。工單退回「${op.name}」，請重新判定。`,
-    'warn',
-  );
 }
 
 export function reduceShop(state: ShopState, action: ShopAction): ShopState {
@@ -619,10 +529,6 @@ export function reduceShop(state: ShopState, action: ShopAction): ShopState {
       return reduceComplete(state, action.opId, action.lotId, action.values);
     case 'qcSubmit':
       return reduceQc(state, action);
-    case 'approveScrap':
-      return reduceApprove(state, action.reviewId);
-    case 'rejectScrap':
-      return reduceReject(state, action.reviewId, action.reason);
     case 'addField': {
       if (state.fieldDefs.some((field) => field.code === action.field.code)) {
         return state;
@@ -634,8 +540,6 @@ export function reduceShop(state: ShopState, action: ShopAction): ShopState {
         ...state,
         fieldDefs: state.fieldDefs.map((field) => (field.code === action.code ? { ...field, ...action.patch, code: field.code } : field)),
       };
-    case 'setThreshold':
-      return { ...state, scrapThresholdPct: action.pct };
     case 'setInventory':
       return { ...state, inventory: { ...state.inventory, [action.productCode]: action.qty } };
     case 'addCode': {

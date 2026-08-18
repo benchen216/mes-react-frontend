@@ -44,7 +44,6 @@ export default function App() {
           <Route path="/shop/terminal" element={<ShopFloor mode="terminal" />} />
           <Route path="/shop/board" element={<ShopFloor mode="board" />} />
           <Route path="/shop/trace" element={<ShopFloor mode="trace" />} />
-          <Route path="/shop/review" element={<ShopFloor mode="review" />} />
           <Route path="/shop/settings" element={<ShopFloor mode="settings" />} />
           <Route path="/shop/concept" element={<ConceptLook />} />
           <Route path="/spec" element={<SpecDocument />} />
