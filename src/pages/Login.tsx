@@ -71,16 +71,16 @@ export function Login() {
             看規格書排版版本
           </a>
           <a
-            href="/shop/concept"
+            href="/shop"
             className="mt-2 block text-center text-sm font-medium text-indigo-600 hover:text-indigo-800"
           >
-            先看現場概念長相
+            進入現場工位（可操作）
           </a>
           <a
-            href="/shop"
+            href="/shop/concept"
             className="mt-2 block text-center text-sm text-gray-500 hover:text-gray-800"
           >
-            或進可操作的五工序 Demo
+            現場概念稿
           </a>
         </div>
       </div>

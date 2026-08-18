@@ -1,47 +1,49 @@
 import { Link } from 'react-router-dom';
-import { useFiveOps } from '../../hooks/useFiveOps';
+import { useShop } from '../../hooks/useShop';
+import { FieldSettings } from './FieldSettings';
+import { ScrapReview } from './ScrapReview';
 import { StatusBoard } from './StatusBoard';
+import { TraceView } from './TraceView';
 import { WorkstationTerminal } from './WorkstationTerminal';
 
-export type ShopMode = 'split' | 'terminal' | 'board';
+export type ShopMode = 'split' | 'terminal' | 'board' | 'trace' | 'review' | 'settings';
+
+const NAV: { to: string; label: string; mode: ShopMode | 'concept' }[] = [
+  { to: '/shop', label: '工位 + 狀態板', mode: 'split' },
+  { to: '/shop/terminal', label: '工位終端', mode: 'terminal' },
+  { to: '/shop/board', label: '狀態板', mode: 'board' },
+  { to: '/shop/trace', label: '追溯', mode: 'trace' },
+  { to: '/shop/review', label: '報廢審核', mode: 'review' },
+  { to: '/shop/settings', label: '欄位設定', mode: 'settings' },
+];
 
 export function ShopFloor({ mode }: { mode: ShopMode }) {
-  const { reset } = useFiveOps();
+  const { reset, state } = useShop();
+  const pending = state.scrapReviews.filter((item) => item.status === 'pending').length;
 
   return (
     <div className="shop-floor flex min-h-[100dvh] flex-col bg-[#0a0a0a] text-[#eaeaea]">
       <div className="flex items-center justify-between gap-3 border-b border-[#2a2a2a] px-4 py-2 font-shop-mono text-[11px] tracking-[0.14em] text-[#8a8a8a]">
-        <div className="flex items-center gap-4">
-          <span>MES 現場 / 五工序 Demo</span>
-          <nav className="flex items-center gap-3">
-            <Link className={mode === 'split' ? 'text-[#eaeaea]' : 'hover:text-[#eaeaea]'} to="/shop">
-              左右分欄
-            </Link>
-            <Link className={mode === 'terminal' ? 'text-[#eaeaea]' : 'hover:text-[#eaeaea]'} to="/shop/terminal">
-              只開工位
-            </Link>
+        <div className="flex min-w-0 items-center gap-4">
+          <span className="shrink-0 text-[#eaeaea]">MES 現場執行</span>
+          <nav className="flex min-w-0 items-center gap-3 overflow-x-auto">
+            {NAV.map((item) => (
+              <Link key={item.to} className={mode === item.mode ? 'text-[#eaeaea]' : 'hover:text-[#eaeaea]'} to={item.to}>
+                {item.label}
+                {item.mode === 'review' && pending > 0 ? ` (${pending})` : ''}
+              </Link>
+            ))}
             <Link className="hover:text-[#eaeaea]" to="/shop/concept">
-              概念長相
+              概念稿
             </Link>
-            <Link className="hover:text-[#eaeaea]" to="/spec">
-              規格書
-            </Link>
-            <a
-              className={mode === 'board' ? 'text-[#eaeaea]' : 'hover:text-[#eaeaea]'}
-              href="/shop/board"
-              target={mode === 'split' ? '_blank' : undefined}
-              rel={mode === 'split' ? 'noreferrer' : undefined}
-            >
-              {mode === 'split' ? '另開狀態板' : '只開狀態板'}
-            </a>
           </nav>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-3">
           <Link className="hover:text-[#eaeaea]" to="/">
             辦公室
           </Link>
           <button type="button" onClick={reset} className="border border-[#3a3a3a] px-2 py-1 hover:border-[#eaeaea] hover:text-[#eaeaea]">
-            重設演示
+            重設現場
           </button>
         </div>
       </div>
@@ -60,6 +62,21 @@ export function ShopFloor({ mode }: { mode: ShopMode }) {
       {mode === 'board' && (
         <div className="min-h-0 flex-1">
           <StatusBoard size="wall" />
+        </div>
+      )}
+      {mode === 'trace' && (
+        <div className="min-h-0 flex-1">
+          <TraceView />
+        </div>
+      )}
+      {mode === 'review' && (
+        <div className="min-h-0 flex-1">
+          <ScrapReview />
+        </div>
+      )}
+      {mode === 'settings' && (
+        <div className="min-h-0 flex-1">
+          <FieldSettings />
         </div>
       )}
     </div>

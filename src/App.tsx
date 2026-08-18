@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Layout } from './components/Layout';
-import { FiveOpsProvider } from './hooks/useFiveOps';
 import { ManufOrderProvider } from './hooks/useManufOrders';
+import { ShopProvider } from './hooks/useShop';
 import { BomDetail } from './pages/BomDetail';
 import { BomList } from './pages/BomList';
 import { Config } from './pages/Config';
@@ -37,12 +37,15 @@ function ProtectedLayout({ children }: { children: ReactNode }) {
 export default function App() {
   return (
     <ManufOrderProvider>
-      <FiveOpsProvider>
+      <ShopProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/shop" element={<ShopFloor mode="split" />} />
           <Route path="/shop/terminal" element={<ShopFloor mode="terminal" />} />
           <Route path="/shop/board" element={<ShopFloor mode="board" />} />
+          <Route path="/shop/trace" element={<ShopFloor mode="trace" />} />
+          <Route path="/shop/review" element={<ShopFloor mode="review" />} />
+          <Route path="/shop/settings" element={<ShopFloor mode="settings" />} />
           <Route path="/shop/concept" element={<ConceptLook />} />
           <Route path="/spec" element={<SpecDocument />} />
           <Route path="/" element={<ProtectedLayout><Dashboard /></ProtectedLayout>} />
@@ -56,7 +59,7 @@ export default function App() {
           <Route path="/config" element={<ProtectedLayout><Config /></ProtectedLayout>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </FiveOpsProvider>
+      </ShopProvider>
     </ManufOrderProvider>
   );
 }

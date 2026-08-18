@@ -21,8 +21,8 @@ interface NavGroup {
 
 const navItems: (NavItem | NavGroup)[] = [
   { to: '/spec', label: '規格書', icon: FileText },
-  { to: '/shop/concept', label: '現場概念', icon: MonitorSmartphone },
-  { to: '/shop', label: '現場工位', icon: MonitorSmartphone },
+  { to: '/shop', label: '現場執行', icon: MonitorSmartphone },
+  { to: '/shop/trace', label: '現場追溯', icon: MonitorSmartphone },
   { to: '/', label: '儀表板', icon: LayoutDashboard },
   { to: '/manuf-orders', label: '製造工單', icon: ClipboardList },
   { to: '/operations', label: '工序工單', icon: Factory },
